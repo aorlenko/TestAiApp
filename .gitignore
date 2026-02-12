@@ -1,0 +1,13 @@
+bin/
+obj/
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.DS_Store
+**/*.user
+**/*.suo
+**/*.db
+**/*.db-shm
+**/*.db-wal
+.env

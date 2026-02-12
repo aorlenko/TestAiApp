@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Todo.Api/Dockerfile
+    container_name: todo-api
+    ports:
+      - "5059:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Frontend__Origin=http://localhost:5173
+      - ConnectionStrings__TodoDb=Data Source=/data/todo.db
+    volumes:
+      - todo-data:/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: todo-frontend
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  todo-data:
