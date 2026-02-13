@@ -131,7 +131,7 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'ConnectionStrings__TodoDb'
-              secretRef: 'sql-connection-string'
+              value: 'PLACEHOLDER' // Will be updated after deployment via workflow
             }
             {
               name: 'Frontend__Origin'

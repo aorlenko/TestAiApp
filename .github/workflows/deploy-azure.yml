@@ -67,11 +67,17 @@ jobs:
       - name: Create resource group and determine region
         id: set-region
         run: |
-          # Try multiple regions in case one has restrictions
+          # Try multiple regions - prioritize regions that typically support SQL Server
           SELECTED_REGION=""
-          for region in "eastus" "westus2" "westeurope" "northeurope"; do
+          for region in "eastus" "westus2" "westus3" "centralus" "southcentralus" "westeurope" "northeurope" "uksouth"; do
+            echo "Trying region: $region"
             if az group create --name ${{ steps.set-rg.outputs.resourceGroup }} --location $region 2>/dev/null; then
               echo "Created resource group in $region"
+              SELECTED_REGION="$region"
+              echo "region=$region" >> $GITHUB_OUTPUT
+              break
+            elif az group show --name ${{ steps.set-rg.outputs.resourceGroup }} --query location -o tsv 2>/dev/null | grep -q "$region"; then
+              echo "Resource group already exists in $region"
               SELECTED_REGION="$region"
               echo "region=$region" >> $GITHUB_OUTPUT
               break
@@ -89,6 +95,7 @@ jobs:
               exit 1
             fi
           fi
+          echo "Selected region: $SELECTED_REGION"
 
       - name: Deploy Bicep template
         run: |
@@ -121,15 +128,21 @@ jobs:
           CONN_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Initial Catalog=${SQL_DB};Persist Security Info=False;User ID=${SQL_USER};Password=${SQL_PASS};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           echo "connectionString=${CONN_STRING}" >> $GITHUB_OUTPUT
 
-      - name: Update Container App secrets
+      - name: Update Container App secrets and environment
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
           ENV="${{ steps.set-env.outputs.environment }}"
           BACKEND_APP="todo-app-api-${ENV}"
+          # Set the secret first
           az containerapp secret set \
             --name $BACKEND_APP \
             --resource-group $RG \
-            --secrets sql-connection-string="${{ steps.get-sql-conn.outputs.connectionString }}"
+            --secrets sql-connection-string="${{ steps.get-sql-conn.outputs.connectionString }}" || echo "Secret may already exist"
+          # Update the environment variable to use the secret
+          az containerapp update \
+            --name $BACKEND_APP \
+            --resource-group $RG \
+            --set-env-vars ConnectionStrings__TodoDb="secretref:sql-connection-string" || true
 
       - name: Get frontend URL and update backend CORS
         id: update-cors
