@@ -64,15 +64,31 @@ jobs:
           ENV="${{ steps.set-env.outputs.environment }}"
           echo "resourceGroup=todo-app-rg-${ENV}" >> $GITHUB_OUTPUT
 
-      - name: Create resource group if it doesn't exist
+      - name: Create resource group and determine region
+        id: set-region
         run: |
           # Try multiple regions in case one has restrictions
+          SELECTED_REGION=""
           for region in "eastus" "westus2" "westeurope" "northeurope"; do
             if az group create --name ${{ steps.set-rg.outputs.resourceGroup }} --location $region 2>/dev/null; then
               echo "Created resource group in $region"
+              SELECTED_REGION="$region"
+              echo "region=$region" >> $GITHUB_OUTPUT
               break
             fi
-          done || az group show --name ${{ steps.set-rg.outputs.resourceGroup }} || (echo "Failed to create resource group" && exit 1)
+          done
+          # If resource group already exists, get its location
+          if [ -z "$SELECTED_REGION" ]; then
+            EXISTING_REGION=$(az group show --name ${{ steps.set-rg.outputs.resourceGroup }} --query location -o tsv 2>/dev/null || echo "")
+            if [ -n "$EXISTING_REGION" ]; then
+              SELECTED_REGION=$(echo "$EXISTING_REGION" | tr -d '"')
+              echo "Using existing resource group in $SELECTED_REGION"
+              echo "region=$SELECTED_REGION" >> $GITHUB_OUTPUT
+            else
+              echo "Failed to create or find resource group"
+              exit 1
+            fi
+          fi
 
       - name: Deploy Bicep template
         run: |
@@ -82,6 +98,7 @@ jobs:
             --template-file main.bicep \
             --parameters appName='todo-app' \
             --parameters environment='${{ steps.set-env.outputs.environment }}' \
+            --parameters location='${{ steps.set-region.outputs.region }}' \
             --parameters sqlAdminUsername='todoadmin' \
             --parameters sqlAutoPauseDelay=60 \
             --parameters sqlAdminPassword="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
