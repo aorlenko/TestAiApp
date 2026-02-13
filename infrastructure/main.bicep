@@ -84,8 +84,8 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 2147483648 // 2GB
     requestedBackupStorageRedundancy: 'Local'
-    autoPauseDelay: sqlAutoPauseDelay == -1 ? -1 : (sqlAutoPauseDelay >= 60 ? sqlAutoPauseDelay : 60)
-    minCapacity: 0.5 // Minimum compute when active (0.5 vCore)
+    autoPauseDelay: sqlAutoPauseDelay >= 60 ? sqlAutoPauseDelay : (sqlAutoPauseDelay == -1 ? -1 : 60)
+    minCapacity: '0.5' // Minimum compute when active (0.5 vCore) - using string due to Bicep validation bug
   }
 }
 
@@ -149,9 +149,9 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 3
       }
     }
-    identity: {
-      type: 'SystemAssigned'
-    }
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
 }
 
@@ -197,9 +197,9 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 3
       }
     }
-    identity: {
-      type: 'SystemAssigned'
-    }
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
 }
 
