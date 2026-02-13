@@ -1,4 +1,4 @@
-using '../infrastructure/main.bicep'
+using './main.bicep'
 
 param appName = 'todo-app'
 param environment = 'prod'
