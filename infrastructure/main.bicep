@@ -1,7 +1,7 @@
 targetScope = 'resourceGroup'
 
 param appName string = 'todo-app'
-param location string = 'eastus' // Default location, can be overridden
+param location string = 'eastus'
 param environment string = 'dev'
 param sqlAdminUsername string = 'todoadmin'
 @secure()
