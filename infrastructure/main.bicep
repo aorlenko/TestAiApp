@@ -54,6 +54,9 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
       }
     }
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
 }
 
 // SQL Server
@@ -112,6 +115,12 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
+      registries: [
+        {
+          server: '${containerRegistry.properties.loginServer}'
+          identity: containerAppEnv.id
+        }
+      ]
     }
     template: {
       containers: [
@@ -162,6 +171,12 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
+      registries: [
+        {
+          server: '${containerRegistry.properties.loginServer}'
+          identity: containerAppEnv.id
+        }
+      ]
     }
     template: {
       containers: [
@@ -191,9 +206,16 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-// Grant Container Apps access to Container Registry
-// Note: Using admin credentials for simplicity. In production, use managed identity.
-// The registry configuration in container apps uses identity, but we enable admin user for CI/CD
+// Grant Container Apps Environment identity AcrPull role on Container Registry
+resource containerRegistryRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: containerRegistry
+  name: guid(containerAppEnv.id, containerRegistry.id, 'AcrPull')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe0d1daa5e') // AcrPull
+    principalId: containerAppEnv.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // SQL Connection String Secret (will be set manually or via pipeline)
 // Note: In production, use Azure Key Vault for secrets management

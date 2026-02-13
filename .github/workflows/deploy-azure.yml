@@ -110,16 +110,12 @@ jobs:
             --parameters sqlAutoPauseDelay=60 \
             --parameters sqlAdminPassword="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
 
-      - name: Get Container Registry name and credentials
+      - name: Get Container Registry name
         id: get-acr
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
           ACR_NAME=$(az acr list --resource-group $RG --query "[0].name" -o tsv)
-          ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username -o tsv)
-          ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv)
           echo "acrName=${ACR_NAME}" >> $GITHUB_OUTPUT
-          echo "acrUsername=${ACR_USERNAME}" >> $GITHUB_OUTPUT
-          echo "acrPassword=${ACR_PASSWORD}" >> $GITHUB_OUTPUT
 
       - name: Get SQL connection string
         id: get-sql-conn
@@ -132,44 +128,10 @@ jobs:
           CONN_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Initial Catalog=${SQL_DB};Persist Security Info=False;User ID=${SQL_USER};Password=${SQL_PASS};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           echo "connectionString=${CONN_STRING}" >> $GITHUB_OUTPUT
 
-      - name: Configure Container Registry credentials for Container Apps
+      - name: Wait for role assignment propagation
         run: |
-          RG="${{ steps.set-rg.outputs.resourceGroup }}"
-          ENV="${{ steps.set-env.outputs.environment }}"
-          ACR_NAME="${{ steps.get-acr.outputs.acrName }}"
-          ACR_USERNAME="${{ steps.get-acr.outputs.acrUsername }}"
-          ACR_PASSWORD="${{ steps.get-acr.outputs.acrPassword }}"
-          
-          # Create registry secret names
-          REGISTRY_SECRET_NAME="${ACR_NAME//-/}registry"
-          
-          # Set registry credentials as secrets for backend app
-          az containerapp secret set \
-            --name todo-app-api-${ENV} \
-            --resource-group $RG \
-            --secrets "${REGISTRY_SECRET_NAME}-username=${ACR_USERNAME}" "${REGISTRY_SECRET_NAME}-password=${ACR_PASSWORD}" || true
-          
-          # Configure registry for backend app using secrets
-          az containerapp registry set \
-            --name todo-app-api-${ENV} \
-            --resource-group $RG \
-            --server ${ACR_NAME}.azurecr.io \
-            --secret "${REGISTRY_SECRET_NAME}-username" \
-            --password-secret "${REGISTRY_SECRET_NAME}-password" || echo "Registry may already be configured"
-          
-          # Set registry credentials as secrets for frontend app
-          az containerapp secret set \
-            --name todo-app-web-${ENV} \
-            --resource-group $RG \
-            --secrets "${REGISTRY_SECRET_NAME}-username=${ACR_USERNAME}" "${REGISTRY_SECRET_NAME}-password=${ACR_PASSWORD}" || true
-          
-          # Configure registry for frontend app using secrets
-          az containerapp registry set \
-            --name todo-app-web-${ENV} \
-            --resource-group $RG \
-            --server ${ACR_NAME}.azurecr.io \
-            --secret "${REGISTRY_SECRET_NAME}-username" \
-            --password-secret "${REGISTRY_SECRET_NAME}-password" || echo "Registry may already be configured"
+          echo "Waiting for managed identity role assignment to propagate..."
+          sleep 30
 
       - name: Update Container App secrets and environment
         run: |
