@@ -54,9 +54,6 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
       }
     }
   }
-  identity: {
-    type: 'SystemAssigned'
-  }
 }
 
 // SQL Server
@@ -115,10 +112,17 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
+      secrets: [
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
+        }
+      ]
       registries: [
         {
-          server: '${containerRegistry.properties.loginServer}'
-          identity: containerAppEnv.id
+          server: containerRegistry.properties.loginServer
+          username: containerRegistry.listCredentials().username
+          passwordSecretRef: 'acr-password'
         }
       ]
     }
@@ -171,10 +175,17 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
+      secrets: [
+        {
+          name: 'acr-password'
+          value: containerRegistry.listCredentials().passwords[0].value
+        }
+      ]
       registries: [
         {
-          server: '${containerRegistry.properties.loginServer}'
-          identity: containerAppEnv.id
+          server: containerRegistry.properties.loginServer
+          username: containerRegistry.listCredentials().username
+          passwordSecretRef: 'acr-password'
         }
       ]
     }
@@ -203,17 +214,6 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
   identity: {
     type: 'SystemAssigned'
-  }
-}
-
-// Grant Container Apps Environment identity AcrPull role on Container Registry
-resource containerRegistryRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry
-  name: guid(containerAppEnv.id, containerRegistry.id, 'AcrPull')
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe0d1daa5e') // AcrPull
-    principalId: containerAppEnv.identity.principalId
-    principalType: 'ServicePrincipal'
   }
 }
 

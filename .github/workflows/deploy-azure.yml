@@ -101,11 +101,6 @@ jobs:
           CONN_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Initial Catalog=${SQL_DB};Persist Security Info=False;User ID=${SQL_USER};Password=${SQL_PASS};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           echo "connectionString=${CONN_STRING}" >> $GITHUB_OUTPUT
 
-      - name: Wait for role assignment propagation
-        run: |
-          echo "Waiting for managed identity role assignment to propagate..."
-          sleep 30
-
       - name: Update Container App secrets and environment
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
