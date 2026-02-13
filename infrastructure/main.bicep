@@ -1,4 +1,3 @@
-@description('Main Bicep template for Todo App Azure infrastructure')
 targetScope = 'resourceGroup'
 
 param appName string = 'todo-app'
@@ -85,7 +84,8 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
     maxSizeBytes: 2147483648 // 2GB
     requestedBackupStorageRedundancy: 'Local'
     autoPauseDelay: sqlAutoPauseDelay >= 60 ? sqlAutoPauseDelay : (sqlAutoPauseDelay == -1 ? -1 : 60)
-    minCapacity: '0.5' // Minimum compute when active (0.5 vCore) - using string due to Bicep validation bug
+    // Note: minCapacity removed due to Bicep type validation issue (expects int but Azure supports decimal)
+    // Serverless will use default minimum capacity
   }
 }
 
