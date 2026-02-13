@@ -112,12 +112,6 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
-      registries: [
-        {
-          server: '${containerRegistry.name}.azurecr.io'
-          // Using admin credentials - managed identity setup removed for simplicity
-        }
-      ]
     }
     template: {
       containers: [
@@ -168,12 +162,6 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
         allowInsecure: false
         transport: 'auto'
       }
-      registries: [
-        {
-          server: '${containerRegistry.name}.azurecr.io'
-          // Using admin credentials - managed identity setup removed for simplicity
-        }
-      ]
     }
     template: {
       containers: [

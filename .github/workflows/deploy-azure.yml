@@ -140,21 +140,36 @@ jobs:
           ACR_USERNAME="${{ steps.get-acr.outputs.acrUsername }}"
           ACR_PASSWORD="${{ steps.get-acr.outputs.acrPassword }}"
           
-          # Configure registry credentials for backend app
+          # Create registry secret names
+          REGISTRY_SECRET_NAME="${ACR_NAME//-/}registry"
+          
+          # Set registry credentials as secrets for backend app
+          az containerapp secret set \
+            --name todo-app-api-${ENV} \
+            --resource-group $RG \
+            --secrets "${REGISTRY_SECRET_NAME}-username=${ACR_USERNAME}" "${REGISTRY_SECRET_NAME}-password=${ACR_PASSWORD}" || true
+          
+          # Configure registry for backend app using secrets
           az containerapp registry set \
             --name todo-app-api-${ENV} \
             --resource-group $RG \
             --server ${ACR_NAME}.azurecr.io \
-            --username $ACR_USERNAME \
-            --password $ACR_PASSWORD || echo "Registry credentials may already be set"
+            --secret "${REGISTRY_SECRET_NAME}-username" \
+            --password-secret "${REGISTRY_SECRET_NAME}-password" || echo "Registry may already be configured"
           
-          # Configure registry credentials for frontend app
+          # Set registry credentials as secrets for frontend app
+          az containerapp secret set \
+            --name todo-app-web-${ENV} \
+            --resource-group $RG \
+            --secrets "${REGISTRY_SECRET_NAME}-username=${ACR_USERNAME}" "${REGISTRY_SECRET_NAME}-password=${ACR_PASSWORD}" || true
+          
+          # Configure registry for frontend app using secrets
           az containerapp registry set \
             --name todo-app-web-${ENV} \
             --resource-group $RG \
             --server ${ACR_NAME}.azurecr.io \
-            --username $ACR_USERNAME \
-            --password $ACR_PASSWORD || echo "Registry credentials may already be set"
+            --secret "${REGISTRY_SECRET_NAME}-username" \
+            --password-secret "${REGISTRY_SECRET_NAME}-password" || echo "Registry may already be configured"
 
       - name: Update Container App secrets and environment
         run: |
