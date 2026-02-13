@@ -126,13 +126,15 @@ jobs:
           ENV="${{ steps.set-env.outputs.environment }}"
           BACKEND_APP="todo-app-api-${ENV}"
           SECRET_COUNT=$(az containerapp show --name $BACKEND_APP --resource-group $RG --query "length(properties.configuration.secrets[?name=='sql-connection-string'])" -o tsv)
+          ENV_SECRET_REF=$(az containerapp show --name $BACKEND_APP --resource-group $RG --query "properties.template.containers[0].env[?name=='ConnectionStrings__TodoDb'].secretRef | [0]" -o tsv)
           ENV_VALUE=$(az containerapp show --name $BACKEND_APP --resource-group $RG --query "properties.template.containers[0].env[?name=='ConnectionStrings__TodoDb'].value | [0]" -o tsv)
           if [ "$SECRET_COUNT" != "1" ]; then
             echo "::error::sql-connection-string secret was not set on backend app."
             exit 1
           fi
-          if [ "$ENV_VALUE" != "secretref:sql-connection-string" ]; then
-            echo "::error::ConnectionStrings__TodoDb is not bound to secretref:sql-connection-string."
+          if [ "$ENV_SECRET_REF" != "sql-connection-string" ]; then
+            echo "::error::ConnectionStrings__TodoDb is not bound to secretRef 'sql-connection-string'."
+            echo "::error::Current secretRef: $ENV_SECRET_REF"
             echo "::error::Current value: $ENV_VALUE"
             exit 1
           fi
