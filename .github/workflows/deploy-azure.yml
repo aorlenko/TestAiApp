@@ -110,12 +110,16 @@ jobs:
             --parameters sqlAutoPauseDelay=60 \
             --parameters sqlAdminPassword="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
 
-      - name: Get Container Registry name
+      - name: Get Container Registry name and credentials
         id: get-acr
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
           ACR_NAME=$(az acr list --resource-group $RG --query "[0].name" -o tsv)
+          ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv)
           echo "acrName=${ACR_NAME}" >> $GITHUB_OUTPUT
+          echo "acrUsername=${ACR_USERNAME}" >> $GITHUB_OUTPUT
+          echo "acrPassword=${ACR_PASSWORD}" >> $GITHUB_OUTPUT
 
       - name: Get SQL connection string
         id: get-sql-conn
@@ -127,6 +131,30 @@ jobs:
           SQL_PASS="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
           CONN_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Initial Catalog=${SQL_DB};Persist Security Info=False;User ID=${SQL_USER};Password=${SQL_PASS};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           echo "connectionString=${CONN_STRING}" >> $GITHUB_OUTPUT
+
+      - name: Configure Container Registry credentials for Container Apps
+        run: |
+          RG="${{ steps.set-rg.outputs.resourceGroup }}"
+          ENV="${{ steps.set-env.outputs.environment }}"
+          ACR_NAME="${{ steps.get-acr.outputs.acrName }}"
+          ACR_USERNAME="${{ steps.get-acr.outputs.acrUsername }}"
+          ACR_PASSWORD="${{ steps.get-acr.outputs.acrPassword }}"
+          
+          # Configure registry credentials for backend app
+          az containerapp registry set \
+            --name todo-app-api-${ENV} \
+            --resource-group $RG \
+            --server ${ACR_NAME}.azurecr.io \
+            --username $ACR_USERNAME \
+            --password $ACR_PASSWORD || echo "Registry credentials may already be set"
+          
+          # Configure registry credentials for frontend app
+          az containerapp registry set \
+            --name todo-app-web-${ENV} \
+            --resource-group $RG \
+            --server ${ACR_NAME}.azurecr.io \
+            --username $ACR_USERNAME \
+            --password $ACR_PASSWORD || echo "Registry credentials may already be set"
 
       - name: Update Container App secrets and environment
         run: |

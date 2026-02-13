@@ -115,7 +115,7 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
       registries: [
         {
           server: '${containerRegistry.name}.azurecr.io'
-          identity: containerAppEnv.id
+          // Using admin credentials - managed identity setup removed for simplicity
         }
       ]
     }
@@ -171,7 +171,7 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
       registries: [
         {
           server: '${containerRegistry.name}.azurecr.io'
-          identity: containerAppEnv.id
+          // Using admin credentials - managed identity setup removed for simplicity
         }
       ]
     }
