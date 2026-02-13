@@ -1,7 +1,7 @@
 targetScope = 'resourceGroup'
 
 param appName string = 'todo-app'
-param location string = resourceGroup().location
+param location string = 'eastus' // Default location, can be overridden
 param environment string = 'dev'
 param sqlAdminUsername string = 'todoadmin'
 @secure()
@@ -10,7 +10,7 @@ param sqlAdminPassword string
 param sqlAutoPauseDelay int = 60
 
 var uniqueSuffix = uniqueString(resourceGroup().id)
-var containerRegistryName = '${appName}acr${uniqueSuffix}'
+var containerRegistryName = '${replace(appName, '-', '')}acr${uniqueSuffix}'
 var containerAppEnvName = '${appName}-env-${environment}'
 var logAnalyticsWorkspaceName = '${appName}-logs-${uniqueSuffix}'
 var sqlServerName = '${appName}-sql-${uniqueSuffix}'
