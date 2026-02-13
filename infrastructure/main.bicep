@@ -6,8 +6,10 @@ param environment string = 'dev'
 param sqlAdminUsername string = 'todoadmin'
 @secure()
 param sqlAdminPassword string
-@description('Auto-pause delay in minutes (minimum 60). Set to -1 to disable auto-pause.')
-param sqlAutoPauseDelay int = 60
+@description('Initial backend image for first deployment bootstrap.')
+param backendImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+@description('Initial frontend image for first deployment bootstrap.')
+param frontendImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var containerRegistryName = '${replace(appName, '-', '')}acr${uniqueSuffix}'
@@ -68,24 +70,18 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   }
 }
 
-// SQL Database - Using Serverless for cost optimization (auto-pauses when inactive)
+// SQL Database - S1 Standard
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   parent: sqlServer
   name: sqlDatabaseName
   location: location
   sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1
+    name: 'S1'
+    tier: 'Standard'
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
     maxSizeBytes: 2147483648 // 2GB
-    requestedBackupStorageRedundancy: 'Local'
-    autoPauseDelay: sqlAutoPauseDelay >= 60 ? sqlAutoPauseDelay : (sqlAutoPauseDelay == -1 ? -1 : 60)
-    // Note: minCapacity removed due to Bicep type validation issue (expects int but Azure supports decimal)
-    // Serverless will use default minimum capacity
   }
 }
 
@@ -130,7 +126,7 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'api'
-          image: '${containerRegistry.properties.loginServer}/todo-api:latest'
+          image: backendImage
           env: [
             {
               name: 'ASPNETCORE_ENVIRONMENT'
@@ -156,9 +152,6 @@ resource backendApp 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 3
       }
     }
-  }
-  identity: {
-    type: 'SystemAssigned'
   }
 }
 
@@ -193,7 +186,7 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'frontend'
-          image: '${containerRegistry.properties.loginServer}/todo-frontend:latest'
+          image: frontendImage
           env: [
             {
               name: 'API_URL'
@@ -211,9 +204,6 @@ resource frontendApp 'Microsoft.App/containerApps@2024-03-01' = {
         maxReplicas: 3
       }
     }
-  }
-  identity: {
-    type: 'SystemAssigned'
   }
 }
 

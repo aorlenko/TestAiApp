@@ -80,7 +80,8 @@ jobs:
             --parameters environment='${{ steps.set-env.outputs.environment }}' \
             --parameters location='${{ steps.set-region.outputs.region }}' \
             --parameters sqlAdminUsername='todoadmin' \
-            --parameters sqlAutoPauseDelay=60 \
+            --parameters backendImage='mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' \
+            --parameters frontendImage='mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' \
             --parameters sqlAdminPassword="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
 
       - name: Get Container Registry name
