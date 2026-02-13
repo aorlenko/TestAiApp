@@ -33,8 +33,8 @@ jobs:
 
       - name: Check Azure secrets
         run: |
-          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ] || [ -z "${{ secrets.AZURE_TENANT_ID }}" ] || [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ] || [ -z "${{ secrets.AZURE_CLIENT_SECRET }}" ]; then
-            echo "::error::Azure secrets are not configured. Please configure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID in repository secrets."
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ] || [ -z "${{ secrets.AZURE_TENANT_ID }}" ] || [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ] || [ -z "${{ secrets.AZURE_CLIENT_SECRET }}" ] || [ -z "${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}" ]; then
+            echo "::error::Azure secrets are not configured. Please configure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, and AZURE_SQL_ADMIN_PASSWORD in repository secrets."
             echo "::error::Go to: Settings → Secrets and variables → Actions → Repository secrets"
             exit 1
           fi
@@ -98,6 +98,9 @@ jobs:
           SQL_SERVER=$(az sql server list --resource-group $RG --query "[0].name" -o tsv)
           SQL_DB=$(az sql db list --resource-group $RG --server $SQL_SERVER --query "[0].name" -o tsv)
           SQL_USER="${{ secrets.AZURE_SQL_ADMIN_USERNAME }}"
+          if [ -z "$SQL_USER" ]; then
+            SQL_USER="todoadmin"
+          fi
           SQL_PASS="${{ secrets.AZURE_SQL_ADMIN_PASSWORD }}"
           CONN_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Initial Catalog=${SQL_DB};Persist Security Info=False;User ID=${SQL_USER};Password=${SQL_PASS};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
           echo "connectionString=${CONN_STRING}" >> $GITHUB_OUTPUT
@@ -107,16 +110,32 @@ jobs:
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
           ENV="${{ steps.set-env.outputs.environment }}"
           BACKEND_APP="todo-app-api-${ENV}"
-          # Set the secret first
+          # Set secret, then bind env var to secretref.
           az containerapp secret set \
             --name $BACKEND_APP \
             --resource-group $RG \
-            --secrets sql-connection-string="${{ steps.get-sql-conn.outputs.connectionString }}" || echo "Secret may already exist"
-          # Update the environment variable to use the secret
+            --secrets sql-connection-string="${{ steps.get-sql-conn.outputs.connectionString }}"
           az containerapp update \
             --name $BACKEND_APP \
             --resource-group $RG \
-            --set-env-vars ConnectionStrings__TodoDb="secretref:sql-connection-string" || true
+            --set-env-vars ConnectionStrings__TodoDb=secretref:sql-connection-string
+
+      - name: Verify backend connection string wiring
+        run: |
+          RG="${{ steps.set-rg.outputs.resourceGroup }}"
+          ENV="${{ steps.set-env.outputs.environment }}"
+          BACKEND_APP="todo-app-api-${ENV}"
+          SECRET_COUNT=$(az containerapp show --name $BACKEND_APP --resource-group $RG --query "length(properties.configuration.secrets[?name=='sql-connection-string'])" -o tsv)
+          ENV_VALUE=$(az containerapp show --name $BACKEND_APP --resource-group $RG --query "properties.template.containers[0].env[?name=='ConnectionStrings__TodoDb'].value | [0]" -o tsv)
+          if [ "$SECRET_COUNT" != "1" ]; then
+            echo "::error::sql-connection-string secret was not set on backend app."
+            exit 1
+          fi
+          if [ "$ENV_VALUE" != "secretref:sql-connection-string" ]; then
+            echo "::error::ConnectionStrings__TodoDb is not bound to secretref:sql-connection-string."
+            echo "::error::Current value: $ENV_VALUE"
+            exit 1
+          fi
 
       - name: Get frontend URL and update backend CORS
         id: update-cors
@@ -206,11 +225,19 @@ jobs:
           az containerapp update \
             --name todo-app-api-${ENV} \
             --resource-group $RG \
-            --image $BACKEND_IMAGE || true
+            --image $BACKEND_IMAGE
           az containerapp update \
             --name todo-app-web-${ENV} \
             --resource-group $RG \
-            --image $FRONTEND_IMAGE || true
+            --image $FRONTEND_IMAGE
+
+      - name: Smoke test backend API
+        run: |
+          RG="${{ needs.deploy-infrastructure.outputs.resourceGroup }}"
+          ENV="${{ needs.deploy-infrastructure.outputs.environment }}"
+          BACKEND_URL=$(az containerapp show --name todo-app-api-${ENV} --resource-group $RG --query "properties.configuration.ingress.fqdn" -o tsv)
+          curl -fsS "https://${BACKEND_URL}/health"
+          curl -fsS "https://${BACKEND_URL}/api/todos" > /dev/null
 
       - name: Output deployment URLs
         run: |
