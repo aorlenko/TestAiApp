@@ -70,7 +70,7 @@ jobs:
 
       - name: Deploy Bicep template
         run: |
-          cd test_task/infrastructure
+          cd infrastructure
           az deployment group create \
             --resource-group ${{ steps.set-rg.outputs.resourceGroup }} \
             --template-file main.bicep \
@@ -158,14 +158,12 @@ jobs:
 
       - name: Build and push backend image
         run: |
-          cd test_task
           docker build -f backend/Todo.Api/Dockerfile -t ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-api:${{ github.sha }} -t ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-api:latest .
           docker push ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-api:${{ github.sha }}
           docker push ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-api:latest
 
       - name: Build and push frontend image
         run: |
-          cd test_task
           docker build -f frontend/Dockerfile -t ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-frontend:${{ github.sha }} -t ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-frontend:latest .
           docker push ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-frontend:${{ github.sha }}
           docker push ${{ needs.deploy-infrastructure.outputs.acrName }}.azurecr.io/todo-frontend:latest
