@@ -17,7 +17,7 @@ Deploys to Azure on:
 
 ## Required Secrets
 
-Configure these in GitHub repository settings → Secrets and variables → Actions:
+Configure these in GitHub repository settings → **Secrets and variables → Actions → Repository secrets** (click "New repository secret"):
 
 | Secret Name | Description | Example |
 |------------|-------------|---------|
@@ -26,6 +26,10 @@ Configure these in GitHub repository settings → Secrets and variables → Acti
 | `AZURE_SUBSCRIPTION_ID` | Azure Subscription ID | `11111111-2222-3333-4444-555555555555` |
 | `AZURE_SQL_ADMIN_PASSWORD` | SQL Server admin password | Strong password |
 | `AZURE_SQL_ADMIN_USERNAME` | SQL Server admin username | `todoadmin` |
+
+**Important**: Use **Repository secrets** (not Environment secrets). The workflow uses the same Azure credentials for both dev and prod environments. If you need different credentials per environment, you can:
+1. Use Environment secrets with GitHub Environments feature (requires workflow changes)
+2. Or use different secret names like `AZURE_CLIENT_ID_DEV` and `AZURE_CLIENT_ID_PROD`
 
 ## Creating Service Principal
 

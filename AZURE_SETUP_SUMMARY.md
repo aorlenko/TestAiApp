@@ -64,12 +64,15 @@
      --sdk-auth
    ```
 
-2. **Add GitHub Secrets**:
+2. **Add GitHub Repository Secrets**:
+   Go to: Settings → Secrets and variables → Actions → **Repository secrets** → New repository secret
    - `AZURE_CLIENT_ID`
    - `AZURE_TENANT_ID`
    - `AZURE_SUBSCRIPTION_ID`
    - `AZURE_SQL_ADMIN_PASSWORD`
    - `AZURE_SQL_ADMIN_USERNAME` (optional, defaults to `todoadmin`)
+   
+   **Note**: Use Repository secrets (not Environment secrets) - simpler and works with current workflow setup.
 
 3. **Push to trigger deployment**:
    - `main` branch → Production

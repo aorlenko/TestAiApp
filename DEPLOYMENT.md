@@ -17,20 +17,18 @@ This guide walks you through deploying the Todo App to Azure using Infrastructur
 
 2. **Create Azure Service Principal for GitHub Actions**:
    ```bash
-   az ad sp create-for-rbac \
-     --name "todo-app-github-actions" \
-     --role contributor \
-     --scopes /subscriptions/<your-subscription-id> \
-     --sdk-auth
+   az ad sp create-for-rbac --name "todo-app-github-actions" --role contributor --scopes /subscriptions/<your-subscription-id> --sdk-auth
    ```
 
 3. **Configure GitHub Secrets**:
-   Go to your repository → Settings → Secrets and variables → Actions, and add:
+   Go to your repository → Settings → Secrets and variables → Actions → **Repository secrets** (not Environment secrets), and add:
    - `AZURE_CLIENT_ID`: From service principal output
    - `AZURE_TENANT_ID`: From service principal output
    - `AZURE_SUBSCRIPTION_ID`: Your Azure subscription ID
    - `AZURE_SQL_ADMIN_PASSWORD`: Strong password for SQL Server
    - `AZURE_SQL_ADMIN_USERNAME`: SQL admin username (default: `todoadmin`)
+
+   **Note**: Use **Repository secrets** (not Environment secrets) since the workflow doesn't use GitHub Environments feature. Repository secrets are available to all workflows and simpler to manage.
 
 4. **Push to trigger deployment**:
    - Push to `main` branch → deploys to `prod` environment
