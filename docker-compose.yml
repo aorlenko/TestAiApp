@@ -12,6 +12,11 @@ services:
       - ConnectionStrings__TodoDb=Data Source=/data/todo.db
     volumes:
       - todo-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   frontend:
     build:
@@ -19,7 +24,8 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: todo-frontend
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "5173:80"
 

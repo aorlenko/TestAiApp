@@ -6,8 +6,28 @@ using Todo.Api.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("TodoDb")));
+
+// Configure database provider based on connection string
+var connectionString = builder.Configuration.GetConnectionString("TodoDb");
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'TodoDb' is not configured.");
+}
+
+// Use SQL Server if connection string contains "Server=" or "Data Source=" with server name
+// Otherwise use SQLite for local development
+if (connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
+    (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase) && 
+     connectionString.Contains(".database.windows.net", StringComparison.OrdinalIgnoreCase)))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlite(connectionString));
+}
 
 const string corsPolicyName = "Frontend";
 builder.Services.AddCors(options =>
@@ -35,6 +55,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
 }
+
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 var todos = app.MapGroup("/api/todos");
 

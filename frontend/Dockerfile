@@ -8,6 +8,8 @@ COPY ./frontend ./
 RUN npm run build
 
 FROM nginx:1.29-alpine
-COPY ./frontend/nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache gettext
+COPY ./frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
+ENV API_URL=http://api:8080
