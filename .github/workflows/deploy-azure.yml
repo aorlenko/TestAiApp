@@ -139,23 +139,13 @@ jobs:
             exit 1
           fi
 
-      - name: Get frontend URL and update backend CORS
+      - name: Get frontend URL
         id: update-cors
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
           ENV="${{ steps.set-env.outputs.environment }}"
-          BACKEND_URL=$(az containerapp show --name todo-app-api-${ENV} --resource-group $RG --query "properties.configuration.ingress.fqdn" -o tsv)
           FRONTEND_URL=$(az containerapp show --name todo-app-web-${ENV} --resource-group $RG --query "properties.configuration.ingress.fqdn" -o tsv)
           echo "frontendUrl=https://${FRONTEND_URL}" >> $GITHUB_OUTPUT
-          echo "backendUrl=https://${BACKEND_URL}" >> $GITHUB_OUTPUT
-          az containerapp update \
-            --name todo-app-api-${ENV} \
-            --resource-group $RG \
-            --set-env-vars Frontend__Origin="https://${FRONTEND_URL}"
-          az containerapp update \
-            --name todo-app-web-${ENV} \
-            --resource-group $RG \
-            --set-env-vars API_URL="https://${BACKEND_URL}"
 
     outputs:
       acrName: ${{ steps.get-acr.outputs.acrName }}
@@ -238,6 +228,21 @@ jobs:
             --name todo-app-web-${ENV} \
             --resource-group $RG \
             --image $FRONTEND_IMAGE
+
+      - name: Re-apply runtime API wiring after image rollout
+        run: |
+          RG="${{ needs.deploy-infrastructure.outputs.resourceGroup }}"
+          ENV="${{ needs.deploy-infrastructure.outputs.environment }}"
+          BACKEND_URL=$(az containerapp show --name todo-app-api-${ENV} --resource-group $RG --query "properties.configuration.ingress.fqdn" -o tsv)
+          FRONTEND_URL=$(az containerapp show --name todo-app-web-${ENV} --resource-group $RG --query "properties.configuration.ingress.fqdn" -o tsv)
+          az containerapp update \
+            --name todo-app-api-${ENV} \
+            --resource-group $RG \
+            --set-env-vars Frontend__Origin="https://${FRONTEND_URL}"
+          az containerapp update \
+            --name todo-app-web-${ENV} \
+            --resource-group $RG \
+            --set-env-vars API_URL="https://${BACKEND_URL}"
 
       - name: Smoke test backend API
         run: |
