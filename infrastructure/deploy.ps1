@@ -10,7 +10,7 @@ param(
     [string]$SqlAdminPassword,
     
     [Parameter(Mandatory=$false)]
-    [string]$Location = "eastus",
+    [string]$Location = "westus2",
     
     [Parameter(Mandatory=$false)]
     [string]$SqlAdminUsername = "todoadmin"

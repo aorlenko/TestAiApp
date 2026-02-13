@@ -32,7 +32,7 @@ az account set --subscription <your-subscription-id>
 ### 2. Create resource group
 
 ```bash
-az group create --name todo-app-rg-dev --location eastus
+az group create --name todo-app-rg-dev --location westus2
 ```
 
 ### 3. Deploy infrastructure

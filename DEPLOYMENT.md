@@ -51,7 +51,7 @@ cd test_task
 Or using Azure CLI:
 ```bash
 # Create resource group
-az group create --name todo-app-rg-dev --location eastus
+az group create --name todo-app-rg-dev --location westus2
 
 # Deploy infrastructure
 cd test_task/infrastructure

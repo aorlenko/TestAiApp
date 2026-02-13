@@ -67,8 +67,8 @@ jobs:
       - name: Create resource group
         id: set-region
         run: |
-          az group create --name ${{ steps.set-rg.outputs.resourceGroup }} --location eastus || true
-          echo "region=eastus" >> $GITHUB_OUTPUT
+          az group create --name ${{ steps.set-rg.outputs.resourceGroup }} --location westus2 || true
+          echo "region=westus2" >> $GITHUB_OUTPUT
 
       - name: Deploy Bicep template
         run: |
