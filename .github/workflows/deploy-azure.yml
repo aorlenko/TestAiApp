@@ -95,8 +95,15 @@ jobs:
         id: get-sql-conn
         run: |
           RG="${{ steps.set-rg.outputs.resourceGroup }}"
+          APP_DB_NAME="todo-app-db"
           SQL_SERVER=$(az sql server list --resource-group $RG --query "[0].name" -o tsv)
-          SQL_DB=$(az sql db list --resource-group $RG --server $SQL_SERVER --query "[0].name" -o tsv)
+          SQL_DB=$(az sql db show --resource-group $RG --server $SQL_SERVER --name $APP_DB_NAME --query "name" -o tsv 2>/dev/null || true)
+          if [ -z "$SQL_DB" ]; then
+            echo "::error::Expected SQL database '$APP_DB_NAME' was not found on server '$SQL_SERVER'."
+            echo "::error::Available DBs:"
+            az sql db list --resource-group $RG --server $SQL_SERVER --query "[].name" -o tsv || true
+            exit 1
+          fi
           SQL_USER="${{ secrets.AZURE_SQL_ADMIN_USERNAME }}"
           if [ -z "$SQL_USER" ]; then
             SQL_USER="todoadmin"
