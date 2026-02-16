@@ -38,6 +38,7 @@ function App() {
     const completed = todos.filter((todo) => todo.isCompleted).length;
     return { total: todos.length, completed, active: todos.length - completed };
   }, [todos]);
+  const completionRate = stats.total === 0 ? 0 : Math.round((stats.completed / stats.total) * 100);
 
   async function loadTodos() {
     try {
@@ -110,10 +111,19 @@ function App() {
           <div>
             <p className="kicker">Hackathon Todo App</p>
             <h1>Stay focused, ship faster</h1>
+            <p className="hero-subtitle">
+              Plan your day, track progress, and keep your momentum.
+            </p>
           </div>
-          <button className="ghost-button" onClick={() => void loadTodos()} type="button">
-            Refresh
-          </button>
+          <div className="header-actions">
+            <span className="status-pill">
+              <span className="status-dot" />
+              Live sync
+            </span>
+            <button className="ghost-button" onClick={() => void loadTodos()} type="button">
+              Refresh
+            </button>
+          </div>
         </header>
 
         <form className="todo-form" onSubmit={handleCreateTodo}>
@@ -140,17 +150,29 @@ function App() {
 
         <section className="stats-grid">
           <article>
+            <span className="stat-label">All tasks</span>
             <p>Total</p>
             <strong>{stats.total}</strong>
           </article>
           <article>
+            <span className="stat-label">To do</span>
             <p>Active</p>
             <strong>{stats.active}</strong>
           </article>
           <article>
+            <span className="stat-label">Done</span>
             <p>Completed</p>
             <strong>{stats.completed}</strong>
           </article>
+        </section>
+        <section className="progress-panel" aria-label="Completion progress">
+          <div className="progress-header">
+            <p>Progress</p>
+            <strong>{completionRate}% complete</strong>
+          </div>
+          <div className="progress-track">
+            <span className="progress-fill" style={{ width: `${completionRate}%` }} />
+          </div>
         </section>
 
         <nav className="filter-row" aria-label="Todo filters">
