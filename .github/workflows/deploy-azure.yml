@@ -242,7 +242,7 @@ jobs:
           az containerapp update \
             --name todo-app-web-${ENV} \
             --resource-group $RG \
-            --set-env-vars API_URL="https://${BACKEND_URL}"
+            --set-env-vars API_URL="https://${BACKEND_URL}" API_HOST="${BACKEND_URL}"
 
       - name: Smoke test backend API
         run: |
